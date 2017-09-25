@@ -1,1 +1,1 @@
-# snapit
+Directory snapshotting.
