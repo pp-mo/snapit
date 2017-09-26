@@ -1,12 +1,9 @@
-#!/bin/env python2.7
 #
-# Plot timing data from output of "run_benchmarks.py", in:
-#   https://gitlab.com/pelson/performance-metrics/blob/master/
+# Take a "snapshot" of a directory.
 #
-# Currently works with sample test result (included in this repo for now).
+# The directory is renamed as a snapshot, and replaced by a copy containing
+# softlinks to all the content.
 #
-from __future__ import division
-
 import datetime
 import six
 import shutil
@@ -104,7 +101,7 @@ def make_soft_image(target_dirpath, relative_source_dirpath, dryrun=False):
                 os.symlink(source_relative_path, target_path)
 
 
-def snapshot(current_path=None,
+def snapshot(current_path,
              snapshot_name=None,
              verbose=None, dryrun=False):
     """
@@ -121,6 +118,7 @@ def snapshot(current_path=None,
     Args:
     * current_path (string):
         path to the existing 'current' directory to be snapshotted + replaced.
+        The new snapshot will be created in its parent directory.
     * snapshot_name (string):
         filename for the new snapshot.  Defaults to a timestamp.
     * dryrun (bool):
@@ -144,7 +142,9 @@ def snapshot(current_path=None,
     # The snapshot name defaults to a timestamp.
     if snapshot_name is None:
         timestamp = datetime.datetime.now()
-        snapshot_name = timestamp.strftime(TIMESTAMP_STRFTIME_FMT)
+        timestamp = timestamp.strftime(TIMESTAMP_STRFTIME_FMT)
+        key_name = os.path.basename(current_path)
+        snapshot_name = 'snapshot_{}_{}'.format(key_name, timestamp)
     snapshot_path = os.path.join(parent_path, snapshot_name)
 
     # Rename the current content to the snapshot path.
@@ -156,31 +156,3 @@ def snapshot(current_path=None,
     # Create a new 'current' full of links to the original content.
     snapshot_relative_path = os.sep.join(['..', snapshot_name])
     make_soft_image(current_path, snapshot_relative_path, dryrun=dryrun)
-
-
-def _make_parser():
-    import argparse
-    parser = argparse.ArgumentParser(
-        description='Snapshot a directory.')
-    parser.add_argument('--current', '-c', type=str, default=None,
-                        help=('Directory with current contents to snapshot '
-                              '[default = {}].').format(
-                                  DEFAULT_CURRENT_PATH))
-    parser.add_argument('--name', '-n', type=str, default=None,
-                        help=('Name for snapshot [default = a timestamp].'))
-    parser.add_argument('--verbose', '-v', action="store_true",
-                        help=('Print details.'))
-    parser.add_argument('--dry-run', action="store_true",
-                        help=('Do nothing, but show what would happen.'))
-    return parser
-
-
-if __name__ == '__main__':
-    parser = _make_parser()
-    args = parser.parse_args()
-
-    dryrun = args.dryrun
-    verbose = args.verbose or dryrun
-    snapshot(current_path=args.current,
-             snapshot_name=args.name,
-             verbose=verbose, dryrun=dryrun)
