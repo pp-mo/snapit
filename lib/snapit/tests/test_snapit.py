@@ -4,24 +4,28 @@ import os
 import os.path
 import shutil
 
+import snapit
 from snapit import snapshot
 
 class TestSnapit(tests.TestCase):
-    def test_snapit(self):
+    def setUp(self):
         # copy reference data to a new 'test data' directory.
-        ref_path = './data_testing/ref_data'
-        tgt_path = './data_testing/test_data'
-        if os.path.exists(tgt_path):
-            shutil.rmtree(tgt_path)
-        shutil.copytree(ref_path, tgt_path, symlinks=True)
-        current_path = os.path.join(tgt_path, 'current')
+        snapit_path = os.path.dirname(snapit.__file__)
+        data_testing_path = os.path.join(snapit_path, 'tests/data_testing')
+        self.ref_path = os.path.join(data_testing_path, 'ref_data')
+        self.tgt_path = os.path.join(data_testing_path, 'test_data')
+        if os.path.exists(self.tgt_path):
+            shutil.rmtree(self.tgt_path)
+        shutil.copytree(self.ref_path, self.tgt_path, symlinks=True)
+        self.current_path = os.path.join(self.tgt_path, 'current')
 
+    def test_snapit(self):
         # Snapshot the test data.
-        snapshot(current_path, snapshot_name='snapshot_2')
+        snapshot(self.current_path, snapshot_name='snapshot_2')
 
         # Perform various checks on the results.
         def check_path(relpath, isfile=False, isdir=False, link=None):
-            path = os.path.join(tgt_path, relpath)
+            path = os.path.join(self.tgt_path, relpath)
             self.assertTrue(os.path.exists(path))
             if isfile:
                 self.assertTrue(os.path.isfile(path))
@@ -45,6 +49,9 @@ class TestSnapit(tests.TestCase):
 
         check_path('snapshot_1/file_1.txt', isfile=True)
         check_path('snapshot_1/subdir/file_2.txt', isfile=True)
+
+    def test_dryrun(self):
+        snapshot(self.current_path, dryrun=True)
 
 
 # Test the result.
