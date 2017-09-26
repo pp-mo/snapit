@@ -62,17 +62,19 @@ def make_soft_image(target_dirpath, relative_source_dirpath):
             make_soft_image(target_path, source_subdir_relative_path)
         else:
             # Create a softlink.
-#            while os.path.islink(source_actual_path):
-#                # Replace a links with their targets, to avoid creating links
-#                # to other links.
-#                from_path = os.readlink(source_actual_path)
-#                source_relative_path = 
+            if os.path.islink(source_actual_path):
+                # Don't link to a link -- copy it instead.
+                # NOTE: this only works because snapshots share a structure
+                # and all softlinks go through the parent directory.
+                # So a relative path like "../../snap_1/subdir_a/actual_file"
+                # is correct from within *any* "<snapshot>/subdir_a".
+                source_relative_path = os.readlink(source_actual_path)
             os.symlink(source_relative_path, target_path)
 
 
 def snapshot(current_path=None,
-             snapshot_name=None,
-             verbose=None, dryrun=False):
+             snapshot_name=None):
+    #        verbose=None, dryrun=False):
     """
     Snapshot the contents of a directory tree using softlinks.
 
@@ -95,15 +97,8 @@ def snapshot(current_path=None,
         print summary of actions. Defaults to ='dryrun'.
 
     """
-    if verbose is None:
-        verbose = dryrun
-#    if current_path is None:
-#        if os.path.exists(DEFAULT_CURRENT_PATH):
-#            # 'current' is under here: create snapshots here by default.
-#            current_path = DEFAULT_CURRENT_PATH
-#        else:
-#            # assume this *is* current: create snapshots in parent by default.
-#            current_path = '.'
+#    if verbose is None:
+#        verbose = dryrun
 
     if not os.path.exists(current_path):
         msg = 'Current content path, "{!s}", does not exist.'
@@ -137,12 +132,13 @@ def _make_parser():
                         help=('Name for snapshot [default = a timestamp].'))
 #    parser.add_argument('--comment', '-c', type=str,
 #                        help=('Create snapshot comment file.'))
-#    parser.add_argument('--comment-filename', '-n', type=str, default='snapshot.file'
+#    parser.add_argument('--comment-filename', '-n', type=str,
+#                        default='snapshot.file',
 #                        help=('Create snapshot comment file.'))
-    parser.add_argument('--verbose', '-v', action="store_true",
-                        help=('Print details.'))
-    parser.add_argument('--dry-run', action="store_true",
-                        help=('Do nothing, but show what would happen.'))
+#    parser.add_argument('--verbose', '-v', action="store_true",
+#                        help=('Print details.'))
+#    parser.add_argument('--dry-run', action="store_true",
+#                        help=('Do nothing, but show what would happen.'))
     return parser
 
 
@@ -150,6 +146,5 @@ if __name__ == '__main__':
     parser = _make_parser()
     args = parser.parse_args()
     snapshot(current_path=args.current,
-             snapshot_name=args.name,
-             verbose=args.verbose, dryrun=args.dry_run)
-
+             snapshot_name=args.name)
+#             verbose=args.verbose, dryrun=args.dry_run)
