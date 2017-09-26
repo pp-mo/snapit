@@ -23,14 +23,8 @@ pip-log.txt
 #Translations
 *.mo
 
-# Created by Iris build
-*.so
-lib/iris/etc/site.cfg
-lib/iris/fileformats/_pyke_rules/compiled_krb/
-lib/iris/std_names.py
-
-# Iris test result files
-lib/iris/tests/result_image_comparison/
+# test result files
+lib/snapit/tests/data_testing/test_data
 
 # Pydev/Eclipse files
 .project

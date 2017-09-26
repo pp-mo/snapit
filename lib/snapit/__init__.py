@@ -19,14 +19,19 @@ TIMESTAMP_STRFTIME_FMT = '%Y-%m-%d_%H:%M:%S'
 INFO_VERBOSE = False
 INFO_DRYRUN = False
 
-def info(message):
+
+def _log_message(message):
+    print(message)
+
+
+def _info(message):
     if INFO_VERBOSE:
         if INFO_DRYRUN:
             message = 'Would: ' + message
-        print(message)
+        _log_message(message)
 
 
-def ensure_path(path):
+def _ensure_path(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -52,27 +57,31 @@ def make_soft_image(target_dirpath, relative_source_dirpath, dryrun=False):
     """
     actual_source_dirpath = os.path.join(target_dirpath,
                                          relative_source_dirpath)
-    info('Make soft image of {!r} in {!r}'.format(
+    _info('[Make soft image of {!r} in {!r}]'.format(
         actual_source_dirpath, target_dirpath))
 
     # Create target if it does not exist.
-    info('Ensure {!r} exists.'.format(target_dirpath))
+    _info('Ensure {!r} exists.'.format(target_dirpath))
     if not dryrun:
-        ensure_path(target_dirpath)
+        _ensure_path(target_dirpath)
 
     # Check target is empty.
-    info('Check {!r} is empty.'.format(target_dirpath))
-    if len(os.listdir(target_dirpath)) > 0:
+    _info('Check {!r} is empty.'.format(target_dirpath))
+    if not dryrun and len(os.listdir(target_dirpath)) > 0:
         msg = 'Aborted creating links in "{!s}" as it is not empty.'
         raise ValueError(msg.format(target_dirpath))
 
     # Fill target with pointers to the source data.
-    for name in os.listdir(actual_source_dirpath):
-        info('Create soft-link for {!r} in {!r}'.format(
-            name, actual_source_dirpath))
+    listing_path = target_dirpath if dryrun else actual_source_dirpath
+    for name in os.listdir(listing_path):
         target_path = os.path.join(target_dirpath, name)
+        _info('[[Make link for {!r} ...]]'.format(target_path))
         source_relative_path = os.path.join(relative_source_dirpath, name)
-        source_actual_path = os.path.join(target_dirpath, source_relative_path)
+        if dryrun:
+            source_actual_path = target_path
+        else:
+            source_actual_path = os.path.join(actual_source_dirpath,
+                                              source_relative_path)
         if os.path.isdir(source_actual_path):
             # Recurse to create sub-directory.
             # Make path to the source subdir relative to the target subdir.
@@ -89,7 +98,7 @@ def make_soft_image(target_dirpath, relative_source_dirpath, dryrun=False):
                 # So a relative path like "../../snap_1/subdir_a/actual_file"
                 # is correct from within *any* "<snapshot>/subdir_a".
                 source_relative_path = os.readlink(source_actual_path)
-            info('Create softlink at {!r} to {!r}.'.format(
+            _info('Create softlink at {!r} to {!r}.'.format(
                 target_path, source_relative_path))
             if not dryrun:
                 os.symlink(source_relative_path, target_path)
@@ -97,7 +106,7 @@ def make_soft_image(target_dirpath, relative_source_dirpath, dryrun=False):
 
 def snapshot(current_path=None,
              snapshot_name=None,
-             verbose=False, dryrun=False):
+             verbose=None, dryrun=False):
     """
     Snapshot the contents of a directory tree using softlinks.
 
@@ -123,6 +132,9 @@ def snapshot(current_path=None,
     if verbose is None:
         verbose = dryrun
 
+    global INFO_DRYRUN, INFO_VERBOSE
+    INFO_DRYRUN, INFO_VERBOSE = dryrun, verbose
+
     if not os.path.exists(current_path):
         msg = 'Current content path, "{!s}", does not exist.'
         raise ValueError(msg.format(current_path))
@@ -136,7 +148,7 @@ def snapshot(current_path=None,
     snapshot_path = os.path.join(parent_path, snapshot_name)
 
     # Rename the current content to the snapshot path.
-    info('Move (rename) target {!r} to new snapshot {!r}'.format(
+    _info('Move (rename) target {!r} to new snapshot {!r}'.format(
         current_path, snapshot_path))
     if not dryrun:
         shutil.move(current_path, snapshot_path)
@@ -156,15 +168,10 @@ def _make_parser():
                                   DEFAULT_CURRENT_PATH))
     parser.add_argument('--name', '-n', type=str, default=None,
                         help=('Name for snapshot [default = a timestamp].'))
-#    parser.add_argument('--comment', '-c', type=str,
-#                        help=('Create snapshot comment file.'))
-#    parser.add_argument('--comment-filename', '-n', type=str,
-#                        default='snapshot.file',
-#                        help=('Create snapshot comment file.'))
-#    parser.add_argument('--verbose', '-v', action="store_true",
-#                        help=('Print details.'))
-#    parser.add_argument('--dry-run', action="store_true",
-#                        help=('Do nothing, but show what would happen.'))
+    parser.add_argument('--verbose', '-v', action="store_true",
+                        help=('Print details.'))
+    parser.add_argument('--dry-run', action="store_true",
+                        help=('Do nothing, but show what would happen.'))
     return parser
 
 
@@ -172,8 +179,8 @@ if __name__ == '__main__':
     parser = _make_parser()
     args = parser.parse_args()
 
-    INFO_VERBOSE = args.verbose or args.dryrun
-    INFO_DRYRUN = args.dryrun
-
+    dryrun = args.dryrun
+    verbose = args.verbose or dryrun
     snapshot(current_path=args.current,
-             snapshot_name=args.name)
+             snapshot_name=args.name,
+             verbose=verbose, dryrun=dryrun)
