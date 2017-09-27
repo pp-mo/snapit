@@ -1,0 +1,11 @@
+#!/bin/bash
+#
+# Replace a softlink with a *copy* of the linked file.
+#
+# This is useful if you need to edit or replace a file in a "snapit" directory.
+# Otherwise, most methods to modify **or even replace/rewrite it** will
+# instead alter the original file instead of replacing the link.
+# N.B. that includes python "open(filepath, 'w')" and  bash ">$filepath".
+#
+cp $1 TEMP__$1
+mv TEMP__$1 $1

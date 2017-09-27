@@ -1,0 +1,55 @@
+#!/bin/env python
+#
+# Add a comment line with timestamp to the top of the file "comment_log.txt".
+#
+# TODO: should we add this as an option to the "snapit" command ?
+#
+import datetime
+import os
+import os.path
+
+from snapit import TIMESTAMP_STRFTIME_FMT
+DEFAULT_LOGFILE_NAME = './comments_log.txt'
+
+
+def add_log_comment(comment, filepath):
+    # Add a timestamped string to the top line of a file.
+    # NOTE: to suit "snapit", this must destroy + create a *new* file.
+    if os.path.exists(filepath):
+        with open(filepath) as file_in:
+            file_content = file_in.read()
+        # Explicitly remove the original, in case it was a softlink.
+        os.remove(filepath)
+    else:
+        file_content = '\n'
+    timestamp = datetime.datetime.now()
+    timestamp = timestamp.strftime(TIMESTAMP_STRFTIME_FMT)
+    new_line = '{} :  {}\n'.format(timestamp, comment)
+    file_content = new_line + file_content
+    with open(filepath, 'w') as file_out:
+        file_out.write(file_content)
+
+
+def _make_parser():
+    import argparse
+    parser = argparse.ArgumentParser(
+        description=(
+            'Add a timestamped comment line to the top of the log file.\n'
+            'Intended to aid "snapit" logging.'))
+    parser.add_argument('comment', nargs='?', type=str, default='',
+                        help=('Text to add to the log '
+                              '[optional: default is just a timestamp].'))
+    parser.add_argument(
+        '--file', '-f', type=str, default=DEFAULT_LOGFILE_NAME,
+        help=('Alternative log filename '
+              '[default = {!s}].').format(DEFAULT_LOGFILE_NAME))
+    return parser
+
+
+if __name__ == '__main__':
+    parser = _make_parser()
+    args = parser.parse_args()
+
+    filepath = args.file
+    comment = args.comment
+    add_log_comment(comment, filepath)

@@ -9,6 +9,7 @@ import os.path
 
 from snapit import snapshot
 
+
 def _make_parser():
     import argparse
     parser = argparse.ArgumentParser(
